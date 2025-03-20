@@ -1,5 +1,5 @@
 import unittest
-from src.main.Sudoku import Sudoku
+from src.main.sudoku import Sudoku
 
 class TestSudoku(unittest.TestCase):
     def setUp(self):
@@ -101,7 +101,7 @@ class TestSudoku(unittest.TestCase):
                         [6, 9, 5, 4, 1, 7, 3, 8, 1]]
         self.assertIsNone(Sudoku(wrong_puzzle).solve())
 
-    def test_completed_sodoku(self):
+    def test_completed_sudoku(self):
         completed_puzzle = [[4, 8, 3, 9, 2, 1, 6, 5, 7],
                             [9, 6, 7, 3, 4, 5, 8, 2, 1],
                             [2, 5, 1, 8, 7, 6, 4, 9, 3],

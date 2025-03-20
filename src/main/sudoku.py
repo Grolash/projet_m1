@@ -1,5 +1,5 @@
 from ortools.sat.python import cp_model
-from src.main.Puzzle import Puzzle
+from src.main.puzzle import Puzzle
 
 
 class Sudoku(Puzzle):
