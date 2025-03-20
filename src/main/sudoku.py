@@ -10,7 +10,6 @@ class Sudoku(Puzzle):
             assert len(self.grid) == 81
             assert max(self.grid) == 9
         except AssertionError as e:
-            print("Invalid Sudoku puzzle")
             raise e
         self.model = cp_model.CpModel()
         self.DOMAIN = 9
