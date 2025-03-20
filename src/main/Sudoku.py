@@ -1,17 +1,22 @@
 from ortools.sat.python import cp_model
-from OrToolsPuzzle import Puzzle
+from src.main.Puzzle import Puzzle
+
 
 class Sudoku(Puzzle):
     def __init__(self, rows):
         super().__init__(9, rows)
         # Create the model.
+        try:
+            assert len(self.grid) == 81
+            assert max(self.grid) == 9
+        except AssertionError as e:
+            print("Invalid Sudoku puzzle")
+            raise e
         self.model = cp_model.CpModel()
-        assert len(self.grid) == 81
-        assert max(self.grid) == 9
-        assert min(self.grid) == 0
         self.DOMAIN = 9
-        self.grid_expr = [self.model.new_int_var(1, 9, 'x[%i]' % i) if x == 0 else self.model.new_int_var(x, x, 'x[%i]' % i) for i, x in enumerate(self.grid)]
-
+        self.grid_expr = [
+            self.model.new_int_var(1, 9, 'x[%i]' % i) if x == 0 else self.model.new_int_var(x, x, 'x[%i]' % i) for i, x
+            in enumerate(self.grid)]
 
     def get_rows(self, grid):
         rows = super().get_rows(grid)
@@ -22,9 +27,13 @@ class Sudoku(Puzzle):
         return cols
 
     def get_squares(self, grid):
-        squares = [self.get_rows(grid)[i:i+3][j:j+3] for j in range(0, 9, 3) for i in range(0, 9, 3)]
-        assert len(squares) == 9
-        return squares[0]
+        squares = [[] for _ in range(9)]
+        rows = self.get_rows(grid)
+        for r in range(9):
+            for c in range(9):
+                square_index = (r // 3) * 3 + (c // 3)  # Calculate which square the cell belongs to
+                squares[square_index].append(rows[r][c])
+        return squares
 
     def constraints(self, grid):
         # AllDifferent on rows
@@ -105,4 +114,28 @@ if __name__ == '__main__':
         [0, 0, 5, 0, 1, 0, 3, 0, 0]
     ]
     s = Sudoku(failpuzzle)
+    s.print()
+    print("\n ===================================== \n")
+    right_puzzle = [[4, 8, 3, 9, 2, 1, 6, 5, 7],
+                    [9, 6, 7, 3, 4, 5, 8, 2, 1],
+                    [2, 5, 1, 8, 7, 6, 4, 9, 3],
+                    [5, 4, 8, 1, 3, 2, 9, 7, 6],
+                    [7, 2, 9, 5, 6, 4, 1, 3, 8],
+                    [1, 3, 6, 7, 9, 8, 2, 4, 5],
+                    [3, 7, 2, 6, 8, 9, 5, 1, 4],
+                    [8, 1, 4, 2, 5, 3, 7, 6, 9],
+                    [6, 9, 5, 4, 1, 7, 3, 8, 2]]
+    s = Sudoku(right_puzzle)
+    s.print()
+    print("\n ===================================== \n")
+    wrong_puzzle = [[4, 8, 3, 9, 2, 1, 6, 5, 7],
+                    [9, 6, 7, 3, 4, 5, 8, 2, 1],
+                    [2, 5, 1, 8, 7, 6, 4, 9, 3],
+                    [5, 4, 8, 1, 3, 2, 9, 7, 6],
+                    [7, 2, 9, 5, 6, 4, 1, 3, 8],
+                    [1, 3, 6, 7, 9, 8, 2, 4, 5],
+                    [3, 7, 2, 6, 8, 9, 5, 1, 4],
+                    [8, 1, 4, 2, 5, 3, 7, 6, 9],
+                    [6, 9, 5, 4, 1, 7, 3, 8, 1]]
+    s = Sudoku(wrong_puzzle)
     s.print()
