@@ -5,17 +5,17 @@ from src.main.puzzle import Puzzle
 class Sudoku(Puzzle):
     def __init__(self, rows):
         super().__init__(9, rows)
-        # Create the model.
         try:
             assert len(self.grid) == 81
             assert max(self.grid) == 9
         except AssertionError as e:
             raise e
-        self.model = cp_model.CpModel()
+        self.model = cp_model.CpModel() # Create the model
         self.DOMAIN = 9
         self.grid_expr = [
             self.model.new_int_var(1, 9, 'x[%i]' % i) if x == 0 else self.model.new_int_var(x, x, 'x[%i]' % i) for i, x
             in enumerate(self.grid)]
+        print(self.grid_expr)
 
     def get_rows(self, grid):
         rows = super().get_rows(grid)
@@ -113,6 +113,11 @@ if __name__ == '__main__':
         [0, 0, 5, 0, 1, 0, 3, 0, 0]
     ]
     s = Sudoku(failpuzzle)
+    """for x in s.grid_expr:
+        print(x)
+        print(x.__repr__())
+        print(len(x.__repr__()))
+        print(type(x.__repr__()))"""
     s.print()
     print("\n ===================================== \n")
     right_puzzle = [[4, 8, 3, 9, 2, 1, 6, 5, 7],
