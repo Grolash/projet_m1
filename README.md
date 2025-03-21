@@ -1,3 +1,3 @@
-![pytest workflow](https://github.com/Grolash/projet_m1/blob/main/.github/workflows/python-app.yml/badge.svg)
+[![Python application](https://github.com/Grolash/projet_m1/actions/workflows/python-app.yml/badge.svg)](https://github.com/Grolash/projet_m1/actions/workflows/python-app.yml)
 
 # projet_m1
