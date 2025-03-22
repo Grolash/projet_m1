@@ -71,8 +71,8 @@ class Shikaku(Puzzle):
             shikaku.model.add_multiplication_equality(self.value, self.width, self.height)
 
     def constraints(self):
-        # Create a 3D array to store which cells belong to which rectangles
-        # cell_in_rect[r][c][rect_idx] indicates if cell (r,c) is in rectangle rect_idx
+        # Create a 2D array to store which cells belong to which rectangles
+        # cell_in_rect[cell_idx][rect_idx] indicates if cell (r,c) is in rectangle rect_idx
         cell_in_rect = {}
 
         # Initialize cell_in_rect for all cells and rectangles
