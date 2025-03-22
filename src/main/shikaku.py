@@ -21,9 +21,6 @@ class Shikaku(Puzzle):
                 self.grid_expr.append(self.model.new_int_var(current, current, f'x[{i}]'))
                 self.rectangles.append(self.Rectangle(current, i, self.grid[i], self))
                 current += 1
-        print(self.grid_expr)
-        for r in self.rectangles:
-            print(r.index, r.pos, r.value, r.top, r.left, r.bottom, r.right, r.width, r.height)
 
     def get_rows(self, grid):
         rows = super().get_rows(grid)
@@ -32,6 +29,13 @@ class Shikaku(Puzzle):
     def get_cols(self, grid):
         cols = super().get_cols(grid)
         return cols
+
+    def get_rectangles(self):  # For testing purposes
+        sol = self.solve()
+        if sol:
+            return sol[1]
+        else:
+            return None
 
     class Rectangle:
         def __init__(self, index, pos, value, shikaku):
@@ -67,49 +71,85 @@ class Shikaku(Puzzle):
             shikaku.model.add_multiplication_equality(self.value, self.width, self.height)
 
     def constraints(self):
-        # Apply constraints for each cell in the grid
+        # Create a 3D array to store which cells belong to which rectangles
+        # cell_in_rect[r][c][rect_idx] indicates if cell (r,c) is in rectangle rect_idx
+        cell_in_rect = {}
+
+        # Initialize cell_in_rect for all cells and rectangles
         for r in range(self.n):
             for c in range(self.n):
                 cell_idx = r * self.n + c
+                cell_in_rect[cell_idx] = {}
 
-                # For each clue's rectangle
                 for rect in self.rectangles:
-                    # Determine if cell is in rectangle
-                    cell_in_rect = self.model.NewBoolVar(f'cell_{cell_idx}_in_{rect.index}')
+                    # Create a boolean variable indicating if this cell is in this rectangle
+                    cell_in_rect[cell_idx][rect.index] = self.model.NewBoolVar(f'cell_{r}_{c}_in_rect_{rect.index}')
 
-                    # Check if cell is within rectangle boundaries
-                    in_vertical = self.model.NewBoolVar(f'in_vertical_{cell_idx}_{rect.index}')
-                    in_horizontal = self.model.NewBoolVar(f'in_horizontal_{cell_idx}_{rect.index}')
+                    # A cell is in a rectangle if it's within the rectangle's boundaries
+                    self.model.Add(rect.top <= r).OnlyEnforceIf(cell_in_rect[cell_idx][rect.index])
+                    self.model.Add(r <= rect.bottom).OnlyEnforceIf(cell_in_rect[cell_idx][rect.index])
+                    self.model.Add(rect.left <= c).OnlyEnforceIf(cell_in_rect[cell_idx][rect.index])
+                    self.model.Add(c <= rect.right).OnlyEnforceIf(cell_in_rect[cell_idx][rect.index])
 
-                    self.model.Add(rect.top <= r).OnlyEnforceIf(in_vertical)
-                    self.model.Add(r <= rect.bottom).OnlyEnforceIf(in_vertical)
-                    self.model.Add(rect.left <= c).OnlyEnforceIf(in_horizontal)
-                    self.model.Add(c <= rect.right).OnlyEnforceIf(in_horizontal)
+                    # The negation of the above conditions
+                    # If any boundary condition is violated, the cell is not in the rectangle
+                    top_cond = self.model.NewBoolVar(f'top_cond_{r}_{c}_{rect.index}')
+                    bottom_cond = self.model.NewBoolVar(f'bottom_cond_{r}_{c}_{rect.index}')
+                    left_cond = self.model.NewBoolVar(f'left_cond_{r}_{c}_{rect.index}')
+                    right_cond = self.model.NewBoolVar(f'right_cond_{r}_{c}_{rect.index}')
 
-                    # Cell is in rectangle if it's in both horizontal and vertical ranges
-                    self.model.AddBoolAnd([in_vertical, in_horizontal]).OnlyEnforceIf(cell_in_rect)
-                    self.model.AddBoolOr([in_vertical.Not(), in_horizontal.Not()]).OnlyEnforceIf(cell_in_rect.Not())
+                    self.model.Add(rect.top > r).OnlyEnforceIf(top_cond)
+                    self.model.Add(r > rect.bottom).OnlyEnforceIf(bottom_cond)
+                    self.model.Add(rect.left > c).OnlyEnforceIf(left_cond)
+                    self.model.Add(c > rect.right).OnlyEnforceIf(right_cond)
 
-                    # Link cell_in_rect to grid expression
-                    self.model.Add(self.grid_expr[cell_idx] == rect.index).OnlyEnforceIf(cell_in_rect)
-                    self.model.Add(self.grid_expr[cell_idx] != rect.index).OnlyEnforceIf(cell_in_rect.Not())
+                    # Cell is outside rectangle if any condition is true
+                    self.model.AddBoolOr([top_cond, bottom_cond, left_cond, right_cond]).OnlyEnforceIf(
+                        cell_in_rect[cell_idx][rect.index].Not())
+
+                # Each cell must belong to exactly one rectangle
+                rect_vars = [cell_in_rect[cell_idx][rect.index] for rect in self.rectangles]
+                self.model.AddExactlyOne(rect_vars)
+
+        # Link grid_expr to cell_in_rect
+        for r in range(self.n):
+            for c in range(self.n):
+                cell_idx = r * self.n + c
+                for rect in self.rectangles:
+                    # If cell is in rectangle, grid_expr equals rectangle index
+                    self.model.Add(self.grid_expr[cell_idx] == rect.index).OnlyEnforceIf(
+                        cell_in_rect[cell_idx][rect.index])
 
     def solve(self):
         self.constraints()
         solver = cp_model.CpSolver()
         status = solver.Solve(self.model)
         if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
-            return [solver.Value(x) for x in self.grid_expr]
+            rectangles_info = {}
+            for rect in self.rectangles:
+                rectangles_info[rect.index] = {
+                    'top': solver.Value(rect.top),
+                    'left': solver.Value(rect.left),
+                    'bottom': solver.Value(rect.bottom),
+                    'right': solver.Value(rect.right),
+                    'value': rect.value,
+                }
+            return [solver.Value(x) for x in self.grid_expr], rectangles_info
         else:
             return None
 
     def print(self):
-        result = self.solve()
+        sol = self.solve()
+        result, rectangles = sol if sol else (None, None)
         if result:
             print("Solution found:")
             for i in range(self.n):
                 row = [str(r) for r in result[self.n * i: self.n * i + self.n]]
                 print(" ".join(row))
+            print("Rectangles:")
+            for rect in rectangles:
+                print(f'{rect}: {rectangles[rect]}')
+
         else:
             print("No solution found")
 
@@ -124,3 +164,38 @@ if __name__ == '__main__':
     ]
     shikaku = Shikaku(rows)
     shikaku.print()
+
+    wrong_puzzle = [
+        [2, 2, 2, 0, 0],  # 2 appears in a position that won't allow a rectangle to be formed
+        [0, 4, 2, 0, 2],
+        [0, 0, 3, 0, 0],
+        [0, 0, 4, 0, 2],
+        [0, 0, 0, 4, 0]
+    ]
+    shikaku = Shikaku(wrong_puzzle)
+    shikaku.print()
+
+    wrong_puzzle = [
+        [2, 2, 2, 0, 0],  # 2 appears in a position that won't allow a rectangle to be formed
+        [0, 4, 2, 0, 2],
+        [0, 4, 3, 0, 0],  # 4 appears in a position that won't allow a rectangle to be formed
+        [0, 0, 4, 0, 2],
+        [0, 0, 0, 4, 0]
+    ]
+    shikaku = Shikaku(wrong_puzzle)
+    shikaku.print()
+
+    big_puzzle = [
+        [0, 0, 0, 0, 0, 12, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 15, 0, 0],
+        [0, 0, 15, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 21, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 7],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 7, 0, 4, 0]
+    ]
+    shikaku = Shikaku(big_puzzle)
+    shikaku.print()
+
