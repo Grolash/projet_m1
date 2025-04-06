@@ -58,15 +58,15 @@ def test_shikaku_solve():
         result, rectangles = sol
         assert len(result) == len(shikaku.grid)
         assert len(rectangles) == len(shikaku.rectangles)
-        rows = shikaku.get_rows(result)
+        curr_rows = shikaku.get_rows(result)
         for rect in rectangles:
             cells = []
-            for i in range(len(rows)):
-                for j in range(len(rows)):
+            for i in range(len(curr_rows)):
+                for j in range(len(curr_rows)):
                     if rectangles[rect]['top'] <= i <= rectangles[rect]['bottom'] and \
                             rectangles[rect]['left'] <= j <= rectangles[rect]['right']:
-                        assert rows[i][j] == rect
-                        cells.append(rows[i][j])
+                        assert curr_rows[i][j] == rect
+                        cells.append(curr_rows[i][j])
             assert len(cells) == rectangles[rect]['value']
 
 

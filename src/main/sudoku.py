@@ -15,7 +15,6 @@ class Sudoku(Puzzle):
         self.grid_expr = [
             self.model.new_int_var(1, 9, 'x[%i]' % i) if x == 0 else self.model.new_int_var(x, x, 'x[%i]' % i) for i, x
             in enumerate(self.grid)]
-        print(self.grid_expr)
 
     def get_rows(self, grid):
         rows = super().get_rows(grid)
