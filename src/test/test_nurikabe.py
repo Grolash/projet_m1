@@ -114,7 +114,7 @@ def test_nurikabe_solve():
         assert len(sol) == len(nuri.grid) == nuri.n * nuri.n
         nb_islands = 0
         for island in nuri.islands:
-            assert dfs(island.pos, sol, island.index, island.value, nuri.n)
+            assert dfs(island.index, sol, island.index, island.value, nuri.n)
             nb_islands += island.value
         for i in range(len(sol)):
             if sol[i] == 0:

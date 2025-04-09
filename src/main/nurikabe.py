@@ -106,7 +106,6 @@ class Nurikabe(Puzzle):
         # Island isolation constraints (all neighbors of a cell in an island that are not in the island must be black)
         for island in self.islands:
             for idx in range(self.n * self.n):
-
                 neighbors = self.get_neighbors(idx)
                 neighbor_conditions = []
                 for neighbor in neighbors:
