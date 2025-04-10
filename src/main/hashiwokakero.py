@@ -210,9 +210,9 @@ class Hashiwokakero(Puzzle):
                             end_row = max(r, nr)
                             for row in range(start_row + 1, end_row):
                                 if edge_value == 1:
-                                    grid_result[row][c] = '| '
+                                    grid_result[row][c] = '│ '
                                 elif edge_value == 2:
-                                    grid_result[row][c] = '||'
+                                    grid_result[row][c] = '││'
             for row in grid_result:
                 print(" ".join(row))
         else:

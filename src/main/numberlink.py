@@ -54,11 +54,55 @@ class Numberlink(Puzzle):
         return neighbors
 
     def constraints(self):
-        pass
         # like Nurikabe but there is no sea and the paths do not have to be orthogonally separated
         # however, it must link the two cells with the same number
         # also path not zone so only one cell with a given reach
+        reach = {}
+        cell_in_path = {}
+        for r in range(self.n):
+            for c in range(self.n):
+                cell_idx = r * self.n + c
+                cell_in_path[cell_idx] = {}
+                reach[cell_idx] = {}
+                for path in self.paths:
+                    cell_in_path[cell_idx][path.index] = self.model.new_bool_var(f'cell_in_path[{cell_idx}][{path.index}]')
+                    self.model.Add(self.grid_expr[cell_idx] == path.index).\
+                        OnlyEnforceIf(cell_in_path[cell_idx][path.index])
+                    self.model.Add(self.grid_expr[cell_idx] != path.index).\
+                        OnlyEnforceIf(cell_in_path[cell_idx][path.index].Not())
 
+                    reach[cell_idx][path.index] = self.model.new_bool_var(f'reach[{cell_idx}][{path.index}]')
+                    self.model.Add(reach[cell_idx][path.index] == 0).\
+                        OnlyEnforceIf(cell_in_path[cell_idx][path.index].Not())
+                    self.model.Add(reach[cell_idx][path.index] > 0).\
+                        OnlyEnforceIf(cell_in_path[cell_idx][path.index])
+
+                    if cell_idx == path.start:
+                        self.model.Add(reach[cell_idx][path.index] == 1)
+                    else:
+                        self.model.Add(reach[cell_idx][path.index] != 1)
+
+                    if cell_idx == path.start or cell_idx == path.end:
+                        self.model.Add(self.grid_expr[cell_idx] == path.index)
+
+                path_vars = [cell_in_path[cell_idx][path.index] for path in self.paths]
+                self.model.AddAtMostOne(path_vars)
+
+        for r in range(self.n):
+            for c in range(self.n):
+                cell_idx = r * self.n + c
+                neighbors = self.get_neighbors(cell_idx)
+                for path in self.paths:
+                    neighbor_conditions = []
+                    for neighbor in neighbors:
+                        smaller_reach = self.model.new_bool_var(f'smaller_reach[{cell_idx}][{neighbor}][{path.index}]')
+                        self.model.Add(reach[cell_idx][path.index] == reach[neighbor][path.index] + 1).\
+                            OnlyEnforceIf(smaller_reach)
+                        self.model.Add(reach[cell_idx][path.index] != reach[neighbor][path.index] + 1).\
+                            OnlyEnforceIf(smaller_reach.Not())
+                        neighbor_conditions.append(smaller_reach)
+                    self.model.AddExactlyOne(neighbor_conditions).\
+                        OnlyEnforceIf(cell_in_path[cell_idx][path.index])
     def solve(self):
         pass
 

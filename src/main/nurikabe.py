@@ -80,12 +80,10 @@ class Nurikabe(Puzzle):
 
                     cell_reach[island.index][cell_idx] = self.model.NewIntVar(0, self.n * self.n,
                                                                               f'reach_{island.index}_{cell_idx}')
-                    # if cell is white, then reach is 0
                     self.model.Add(cell_reach[island.index][cell_idx] == 0).OnlyEnforceIf(
-                        cell_in_island[island.index][cell_idx].Not())
-                    # if cell is black, then reach is > 0
+                        cell_in_island[island.index][cell_idx].Not()) # if cell is not in island, then reach is 0
                     self.model.Add(cell_reach[island.index][cell_idx] > 0).OnlyEnforceIf(
-                        cell_in_island[island.index][cell_idx])
+                        cell_in_island[island.index][cell_idx]) # if cell is in island, then reach is > 0
 
                     if island.pos == cell_idx:
                         self.model.Add(
