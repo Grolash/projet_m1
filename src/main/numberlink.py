@@ -23,7 +23,7 @@ class Numberlink(Puzzle):
             else:
                 if self.grid[i] not in nb_set.keys():
                     self.grid_expr.append(self.model.new_int_var(current, current, f'x[{i}]'))
-                    self.paths.append(self.Path(current, i, self.grid[i], self))
+                    self.paths.append(self.Path(current, i, self.grid[i]))
                     nb_set[self.grid[i]] = current
                     current += 1
                 else:
@@ -32,7 +32,7 @@ class Numberlink(Puzzle):
                     self.grid_expr.append(self.model.new_int_var(path.index, path.index, f'x[{i}]'))
 
     class Path:
-        def __init__(self, index, start, value, numberlink):
+        def __init__(self, index, start, value):
             self.index = index
             self.start = start
             self.end = None
@@ -65,16 +65,18 @@ class Numberlink(Puzzle):
                 cell_in_path[cell_idx] = {}
                 reach[cell_idx] = {}
                 for path in self.paths:
-                    cell_in_path[cell_idx][path.index] = self.model.new_bool_var(f'cell_in_path[{cell_idx}][{path.index}]')
-                    self.model.Add(self.grid_expr[cell_idx] == path.index).\
+                    cell_in_path[cell_idx][path.index] = self.model.new_bool_var(
+                        f'cell_in_path[{cell_idx}][{path.index}]')
+                    self.model.Add(self.grid_expr[cell_idx] == path.index). \
                         OnlyEnforceIf(cell_in_path[cell_idx][path.index])
-                    self.model.Add(self.grid_expr[cell_idx] != path.index).\
+                    self.model.Add(self.grid_expr[cell_idx] != path.index). \
                         OnlyEnforceIf(cell_in_path[cell_idx][path.index].Not())
 
-                    reach[cell_idx][path.index] = self.model.new_bool_var(f'reach[{cell_idx}][{path.index}]')
-                    self.model.Add(reach[cell_idx][path.index] == 0).\
+                    reach[cell_idx][path.index] = self.model.new_int_var(0, self.n * self.n,
+                                                                         f'reach[{cell_idx}][{path.index}]')
+                    self.model.Add(reach[cell_idx][path.index] == 0). \
                         OnlyEnforceIf(cell_in_path[cell_idx][path.index].Not())
-                    self.model.Add(reach[cell_idx][path.index] > 0).\
+                    self.model.Add(reach[cell_idx][path.index] > 0). \
                         OnlyEnforceIf(cell_in_path[cell_idx][path.index])
 
                     if cell_idx == path.start:
@@ -86,25 +88,69 @@ class Numberlink(Puzzle):
                         self.model.Add(self.grid_expr[cell_idx] == path.index)
 
                 path_vars = [cell_in_path[cell_idx][path.index] for path in self.paths]
-                self.model.AddAtMostOne(path_vars)
+                self.model.AddExactlyOne(path_vars)
 
         for r in range(self.n):
             for c in range(self.n):
                 cell_idx = r * self.n + c
                 neighbors = self.get_neighbors(cell_idx)
                 for path in self.paths:
-                    neighbor_conditions = []
-                    for neighbor in neighbors:
-                        smaller_reach = self.model.new_bool_var(f'smaller_reach[{cell_idx}][{neighbor}][{path.index}]')
-                        self.model.Add(reach[cell_idx][path.index] == reach[neighbor][path.index] + 1).\
-                            OnlyEnforceIf(smaller_reach)
-                        self.model.Add(reach[cell_idx][path.index] != reach[neighbor][path.index] + 1).\
-                            OnlyEnforceIf(smaller_reach.Not())
-                        neighbor_conditions.append(smaller_reach)
-                    self.model.AddExactlyOne(neighbor_conditions).\
-                        OnlyEnforceIf(cell_in_path[cell_idx][path.index])
+                    if cell_idx != path.start:
+                        neighbor_conditions = []
+                        for neighbor in neighbors:
+                            smaller_reach = self.model.new_bool_var(
+                                f'smaller_reach[{cell_idx}][{neighbor}][{path.index}]')
+                            self.model.Add(reach[cell_idx][path.index] == reach[neighbor][path.index] + 1). \
+                                OnlyEnforceIf(smaller_reach)
+                            self.model.Add(reach[cell_idx][path.index] != reach[neighbor][path.index] + 1). \
+                                OnlyEnforceIf(smaller_reach.Not())
+                            neighbor_conditions.append(smaller_reach)
+                        self.model.Add(sum(neighbor_conditions) == 1). \
+                            OnlyEnforceIf(cell_in_path[cell_idx][path.index])
+
+                    if cell_idx == path.end or cell_idx == path.start:
+                        endpoint_neighbors = []
+                        for neighbor in neighbors:
+                            endpoint_neighbors.append(cell_in_path[neighbor][path.index])
+                        self.model.Add(sum(endpoint_neighbors) == 1). \
+                            OnlyEnforceIf(cell_in_path[cell_idx][path.index])
+        return reach
+
     def solve(self):
-        pass
+        reach = self.constraints()
+        solver = cp_model.CpSolver()
+        status = solver.Solve(self.model)
+        if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
+            return [solver.Value(x) for x in self.grid_expr]
+        else:
+            print(solver.solution_info())
+            return None
 
     def print(self):
-        pass
+        result = self.solve()
+        if result:
+            print("Solution found:")
+            for i in range(self.n):
+                row = [str(r) for r in result[self.n * i: self.n * i + self.n]]
+                print(" ".join(row))
+        else:
+            print("No solution found")
+            print("Grid:")
+            print(self.grid_expr)
+            print("Paths:")
+            for path in self.paths:
+                print(f'Path {path.index}: {path.start} -> {path.end}, value: {path.value}')
+
+
+if __name__ == '__main__':
+    puzzle = [
+        [0, 0, 0, 0, 3, 2, 1],
+        [0, 0, 0, 0, 1, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 2, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 3, 5, 0, 0, 4, 0],
+        [4, 0, 0, 0, 0, 0, 5],
+    ]
+    numberlink = Numberlink(puzzle)
+    numberlink.print()
