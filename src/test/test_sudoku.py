@@ -1,5 +1,5 @@
 import pytest
-from src.main.sudoku import Sudoku
+from src.main.back.sudoku import Sudoku
 
 rows = [
     [0, 0, 0, 0, 0, 0, 0, 0, 0],

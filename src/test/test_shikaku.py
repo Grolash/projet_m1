@@ -1,5 +1,5 @@
 import pytest
-from src.main.shikaku import Shikaku
+from src.main.back.shikaku import Shikaku
 
 rows_1 = [
     [0, 2, 2, 0, 0],

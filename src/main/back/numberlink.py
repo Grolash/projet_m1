@@ -1,5 +1,5 @@
 from ortools.sat.python import cp_model
-from src.main.puzzle import Puzzle
+from src.main.back.puzzle import Puzzle
 
 
 class Numberlink(Puzzle):
@@ -132,7 +132,7 @@ class Numberlink(Puzzle):
             print("Solution found:")
             for i in range(self.n):
                 row = [str(r) for r in result[self.n * i: self.n * i + self.n]]
-                print(" ".join(row))
+                print("  ".join(row))
         else:
             print("No solution found")
             print("Grid:")

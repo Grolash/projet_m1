@@ -1,5 +1,5 @@
 import pytest
-from src.main.nurikabe import Nurikabe
+from src.main.back.nurikabe import Nurikabe
 
 puzzle = [
         [0, 0, 5, 0, 0],

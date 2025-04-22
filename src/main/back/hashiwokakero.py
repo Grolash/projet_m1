@@ -1,5 +1,5 @@
 from ortools.sat.python import cp_model
-from src.main.puzzle import Puzzle
+from src.main.back.puzzle import Puzzle
 
 
 class Hashiwokakero(Puzzle):
