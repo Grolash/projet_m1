@@ -1,317 +1,339 @@
-// main/front/src/pages/HomePage.tsx
-import { useState, useRef, useEffect } from "react";
-import { Save, Upload, Play, Grid, Plus, Loader } from "lucide-react";
+import {useState, useEffect, ChangeEvent} from 'react';
+import { Download, Upload, Plus, Grid, Settings, HelpCircle, CheckCircle, SunIcon, MoonIcon } from 'lucide-react';
+import { useTheme } from './themeContext';
+import {Switch} from '@heroui/react';
 
-// Pyodide type declarations
-declare global {
-  interface Window {
-    loadPyodide: (options: { indexURL: string }) => Promise<PyodideInterface>;
-  }
-}
+// Define puzzle types
+const puzzleTypes = [
+  { id: 'numberlink', name: 'Numberlink' },
+  { id: 'nurikabe', name: 'Nurikabe' },
+  { id: 'shikaku', name: 'Shikaku' },
+  { id: 'sudoku', name: 'Sudoku' },
+  { id: 'futoshiki', name: 'Futoshiki' },
+  { id: 'hashiwokakero', name: 'Hashiwokakero (Bridges)' }
+];
 
-interface PyodideInterface {
-  loadPackage: (packages: string[]) => Promise<void>;
-  runPythonAsync: (code: string) => Promise<any>;
-}
+// Default grid sizes for each puzzle type
+const defaultGridSizes: { futoshiki: number; numberlink: number; shikaku: number; sudoku: number; nurikabe: number; hashiwokakero: number } = {
+  numberlink: 7,
+  nurikabe: 5,
+  shikaku: 5,
+  sudoku: 9,
+  futoshiki: 5,
+  hashiwokakero: 7
+};
 
-type PuzzleType = 'sudoku' | 'futoshiki' | 'shikaku' | 'nurikabe' | 'numberlink' | 'hashiwokakero';
+export default function PuzzleSolverHomepage() {
+  const [selectedPuzzleType, setSelectedPuzzleType] = useState('sudoku');
+  const [gridSize, setGridSize]: [number, ((value: number) => void)] = useState(defaultGridSizes[selectedPuzzleType as keyof typeof defaultGridSizes]);
+  const [grid, setGrid] = useState<number[][]>([]);
+  const [status, setStatus] = useState('ready'); // ready, solving, solved, error
+  const [message, setMessage] = useState('');
 
-export default function HomePage() {
-  const [puzzleType, setPuzzleType] = useState<PuzzleType>('sudoku');
-  const [gridSize, setGridSize] = useState(9);
-  const [gridData, setGridData] = useState<number[][]>([]);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [pyodide, setPyodide] = useState<PyodideInterface | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const ThemeToggle = () => {
+    const { theme, toggleTheme } = useTheme();
 
-  // Initialize Pyodide
+    return (
+      <Switch className={"bg-indigo-400 dark:bg-gray-500 text-yellow-200 dark:text-amber-300 rounded-full ml-2"}
+              defaultSelected={theme !== 'light'}
+              size="lg"
+              color="secondary"
+              startContent={<SunIcon />}
+              endContent={<MoonIcon/>}
+              thumbIcon={({isSelected, className}) =>
+                  isSelected ? <MoonIcon className="text-indigo-600 fill-indigo-300" /> : <SunIcon className="text-yellow-600 fill-yellow-300" />
+              }
+              onChange={toggleTheme}
+    />
+
+  );}
+  // Initialize grid when puzzle type or size changes
   useEffect(() => {
-    const initPyodide = async () => {
-      try {
-        const pyodideInstance = await window.loadPyodide({
-          indexURL: "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/",
-        });
-        await pyodideInstance.loadPackage(['micropip']);
-        setPyodide(pyodideInstance);
-      } catch (error) {
-        console.error('Pyodide initialization failed:', error);
-        alert('Failed to initialize Python runtime');
+    createEmptyGrid();
+  }, [selectedPuzzleType, gridSize]);
+  const createEmptyGrid = () => {
+    // Create a grid of the specified size filled with zeros
+    const newGrid: number[][] = Array(gridSize).fill(0).map(() => Array(gridSize).fill(0));
+    setGrid(newGrid);
+    setStatus('ready');
+    setMessage('Empty grid created');
+  };
+
+  const handlePuzzleTypeChange = (e : ChangeEvent<HTMLSelectElement>) => {
+    const newType = e.target.value;
+    setSelectedPuzzleType(newType);
+    setGridSize(defaultGridSizes[newType as keyof typeof defaultGridSizes]);
+  };
+
+
+  const incrementGridSize = () => {
+    if (gridSize < 20) {
+      setGridSize(gridSize + 1);
+    }
+  };
+
+  const decrementGridSize = () => {
+    if (gridSize > 5) {
+      setGridSize(gridSize - 1);
+    }
+  };
+
+  const handleCellChange = (rowIndex : number, colIndex : number, value : string) => {
+    const newGrid = [...grid];
+    newGrid[rowIndex][colIndex] = isNaN(parseInt(value)) ? 0 : parseInt(value);
+    setGrid(newGrid);
+  };
+
+  const savePuzzle = () => {
+    try {
+      const data = JSON.stringify(grid);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${selectedPuzzleType}_${gridSize}x${gridSize}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      setMessage('Puzzle saved successfully');
+    } catch (error : any) {
+      setMessage('Error saving puzzle: ' + error.message);
+    }
+  };
+
+  const loadPuzzle = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const data = event.target?.result as string;
+          const loadedGrid = JSON.parse(data);
+
+          if (Array.isArray(loadedGrid) && loadedGrid.length === gridSize) {
+            setGrid(loadedGrid);
+            setMessage('Puzzle loaded successfully');
+          } else {
+            setMessage('Invalid puzzle format');
+          }
+        } catch (error : any) {
+          setMessage('Error loading puzzle: ' + error.message);
+        }
       }
+      reader.readAsText(file);
     };
-
-    initPyodide().catch(error => {
-      console.error('Pyodide initialization error:', error);
-    });
-  }, []);
-
-  // Generate empty grid based on puzzle type
-  const generateEmptyGrid = () => {
-    const emptyGrid = Array.from({ length: gridSize }, () =>
-      Array.from({ length: gridSize }, () => 0)
-    );
-    setGridData(emptyGrid);
+    
+    input.click();
   };
 
-  // Handle grid size changes
-  const handleSizeChange = (value: number) => {
-    if (value >= 5 && value <= 20) {
-      setGridSize(value);
-      generateEmptyGrid();
-    }
+  const generateRandomPuzzle = () => {
+    setMessage('Generating random puzzle (not implemented yet)');
+    // This would be replaced with actual puzzle generation logic
   };
 
-  // File handling
-  // Add safety checks for file input
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const content = await file.text();
-      const data = JSON.parse(content);
-
-      if (!Array.isArray(data) || !data.every(Array.isArray)) {
-        throw new Error('Invalid puzzle format');
-      }
-
-      setGridData(data);
-      setGridSize(data.length);
-    } catch (error) {
-      console.error('File load error:', error);
-      alert('Invalid puzzle file format');
-    } finally {
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
+  const solvePuzzle = () => {
+    setStatus('solving');
+    setMessage('Solving puzzle...');
+    
+    // This is where you would integrate with the Python solver
+    // For now, we'll just mock a delay and "solve" the puzzle
+    setTimeout(() => {
+      setStatus('solved');
+      setMessage('Puzzle solved! (Mock solution)');
+    }, 2000);
   };
 
-   // File handling with proper type safety
-  const savePuzzle = async () => {
-    if (!('showSaveFilePicker' in window)) {
-      alert('File System Access API not supported in this browser');
-      return;
-    }
-
-    try {
-      const blob = new Blob([JSON.stringify(gridData)], { type: 'application/json' });
-      const handle = await window.showSaveFilePicker({
-        suggestedName: `${puzzleType}_puzzle.json`,
-        types: [{
-          description: 'Puzzle Files',
-          accept: { 'application/json': ['.json'] },
-        }],
-      });
-
-      const writable = await handle.createWritable();
-      await writable.write(blob);
-      await writable.close();
-    } catch (error) {
-      console.error('File save error:', error);
-      if ((error as Error).name !== 'AbortError') {
-        alert('Failed to save file');
-      }
-    }
-  };
-
-  // Updated grid input handler with null checks
-  const handleCellChange = (rowIndex: number, colIndex: number, value: string) => {
-    const numericValue = Math.min(gridSize, Math.max(0, parseInt(value) || 0));
-
-    setGridData(prev => {
-      const newGrid = [...prev];
-      newGrid[rowIndex] = [...prev[rowIndex]];
-      newGrid[rowIndex][colIndex] = numericValue;
-      return newGrid;
-    });
-  };
-
-
-  // Puzzle solving with Pyodide
-  const solvePuzzle = async () => {
-    if (!pyodide) {
-      alert('Python runtime not loaded yet');
-      return;
-    }
-
-    setIsProcessing(true);
-    try {
-      // Load Python solvers
-      await pyodide.runPythonAsync(`
-        from js import window
-        import sys
-        sys.path.append('/main/back/')
-      `);
-
-      // Convert grid data to Python format
-      const solverName = puzzleType.charAt(0).toUpperCase() + puzzleType.slice(1);
-      const pythonCode = `
-        from ${puzzleType} import ${solverName}
-        import json
-        
-        grid_data = json.loads('${JSON.stringify(gridData)}')
-        solver = ${solverName}(grid_data)
-        solution = solver.solve()
-        str(solution) if solution else None
-      `;
-
-      const result = await pyodide.runPythonAsync(pythonCode);
-      if (result) {
-        // Handle solution display
-        console.log('Solution:', result);
-        alert('Solution found! Check console for details');
-      } else {
-        alert('No solution found');
-      }
-    } catch (error) {
-      console.error('Solving error:', error);
-      alert('Error solving puzzle');
-    }
-    setIsProcessing(false);
-  };
-
-  return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Control Panel */}
-      <div className="w-80 bg-white shadow-lg p-6 flex flex-col gap-4">
-        <h1 className="text-3xl font-bold text-indigo-600 mb-4">Puzzle Solver</h1>
-
-        <div className="space-y-6">
-          {/* Puzzle Type Selection */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Puzzle Type
-            </label>
-            <select
-              value={puzzleType}
-              onChange={(e) => setPuzzleType(e.target.value as PuzzleType)}
-              className="w-full p-2 border rounded-md focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="sudoku">Sudoku</option>
-              <option value="futoshiki">Futoshiki</option>
-              <option value="shikaku">Shikaku</option>
-              <option value="nurikabe">Nurikabe</option>
-              <option value="numberlink">Numberlink</option>
-              <option value="hashiwokakero">Hashiwokakero</option>
-            </select>
-          </div>
-
-          {/* Grid Size Controls */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Grid Size ({gridSize}x{gridSize})
-            </label>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => handleSizeChange(gridSize - 1)}
-                disabled={gridSize <= 5}
-                className="p-2 bg-gray-100 rounded-md hover:bg-gray-200 disabled:opacity-50"
-              >
-                -
-              </button>
-              <input
-                type="number"
-                min="5"
-                max="20"
-                value={gridSize}
-                onChange={(e) => handleSizeChange(Number(e.target.value))}
-                className="w-20 p-2 text-center border rounded-md"
-              />
-              <button
-                onClick={() => handleSizeChange(gridSize + 1)}
-                disabled={gridSize >= 20}
-                className="p-2 bg-gray-100 rounded-md hover:bg-gray-200 disabled:opacity-50"
-              >
-                +
-              </button>
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="space-y-3">
+  const sizeChanger = () => {
+        return(
+            <div className="my-8 mb-14">
+          <label className="block text-lg font-medium text-gray-700 dark:text-neutral-200 mb-1">
+            Grid Size
+          </label>
+          <div className="flex items-center">
             <button
-              onClick={generateEmptyGrid}
-              className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white p-2 rounded-md hover:bg-indigo-700"
+              onClick={decrementGridSize}
+              className="px-3 py-2 bg-gray-200 hover:bg-gray-300 dark:text-neutral-200 dark:bg-gray-600 dark:hover:bg-gray-400 rounded-l"
+              disabled={gridSize <= 5}
             >
-              <Grid className="h-5 w-5" />
-              New Empty Grid
+              -
             </button>
-
+            <input
+              type="text"
+              inputMode={'numeric'}
+              min="5"
+              max="20"
+              value={gridSize}
+              className="w-16 p-2 text-center border-y border-gray-300 dark:text-neutral-200 dark:bg-gray-500 dark:border-gray-600 focus:outline-none"
+            />
             <button
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full flex items-center justify-center gap-2 bg-green-600 text-white p-2 rounded-md hover:bg-green-700"
+              onClick={incrementGridSize}
+              className="px-3 py-2 bg-gray-200 hover:bg-gray-300 dark:text-neutral-200 dark:bg-gray-600 dark:hover:bg-gray-400 rounded-r"
+              disabled={gridSize >= 20}
             >
-              <Upload className="h-5 w-5" />
-              Load Puzzle
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileUpload}
-                className="hidden"
-                accept=".json"
-              />
-            </button>
-
-            <button
-              onClick={savePuzzle}
-              className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700"
-            >
-              <Save className="h-5 w-5" />
-              Save Puzzle
-            </button>
-
-            <button
-              onClick={solvePuzzle}
-              disabled={isProcessing}
-              className="w-full flex items-center justify-center gap-2 bg-purple-600 text-white p-2 rounded-md hover:bg-purple-700 disabled:opacity-50"
-            >
-              {isProcessing ? (
-                <Loader className="h-5 w-5 animate-spin" />
-              ) : (
-                <Play className="h-5 w-5" />
-              )}
-              Solve Puzzle
+              +
             </button>
           </div>
         </div>
+        )
+      }
+
+  // Render the grid based on puzzle type
+  const renderGrid = () => {
+    return (
+      <div className="mt-6 w-full overflow-auto">
+        <div 
+          className="grid gap-0.5 mx-auto" 
+          style={{ 
+            gridTemplateColumns: `repeat(${gridSize}, minmax(30px, 40px))`, 
+            maxWidth: Math.min(gridSize * 50, 800) + 'px' 
+          }}
+        >
+          {grid.map((row, rowIndex) => (
+            row.map((cell, colIndex : number) => (
+              <input
+                key={`${rowIndex}-${colIndex}`}
+                type="text"
+                value={cell || ''}
+                onChange={(e) => handleCellChange(rowIndex, colIndex, e.target.value)}
+                className="h-10 w-full border border-gray-500 text-center focus:outline-none focus:ring-2 focus:border-blue-500
+                dark:text-gray-200 dark:border-gray-400 dark:focus:border-red-500 dark:focus:ring-0"
+                maxLength={1}
+              />
+            ))
+          ))}
+        </div>
+      </div>
+    );
+  };
+  return (
+  <div className="flex min-h-screen bg-gray-100 dark:bg-gray-800">
+      {/* Sidebar (Control Panel) */}
+      <div className="w-1/4 bg-gray-50 dark:bg-gray-700 p-4 rounded-lg shadow-lg flex-col">
+        <h2 className="text-xl font-semibold text-gray-800 dark:text-neutral-200 mb-4 flex items-center justify-between">
+          <div className="flex items-center">
+            <Settings size={20} className="mr-2" />
+            Settings Panel
+          </div>
+
+          <div className="flex items-center">
+            <text className="text-gray-800 dark:text-neutral-200">Theme:</text>
+            <ThemeToggle />
+          </div>
+        </h2>
+
+        <div className="my-8">
+          <label className="block text-lg font-medium text-gray-700 dark:text-neutral-200 mb-1">
+            Puzzle Type
+          </label>
+          <select
+            value={selectedPuzzleType}
+            onChange={handlePuzzleTypeChange}
+            className="w-full p-2 border border-gray-300 dark:bg-gray-800 dark:border-gray-400 dark:text-neutral-200 rounded focus:outline-none focus:ring-2 focus:border-red-700"
+          >
+            {puzzleTypes.map(type => (
+              <option key={type.id} value={type.id}>{type.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {selectedPuzzleType != 'sudoku' ? sizeChanger() : <div className="mt-40.5"/>}
+
+        <div className="space-y-3 mt-6">
+          <button
+            onClick={createEmptyGrid}
+            className="w-full flex mb-5 items-center justify-center px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700
+            dark:bg-yellow-600 dark:hover:bg-stone-500 dark:text-stone-200 rounded"
+          >
+            <Grid size={18} className="mr-2" />
+            New Empty Grid
+          </button>
+          <button
+            onClick={loadPuzzle}
+            className="w-full flex mb-5 items-center justify-center px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700
+             dark:bg-green-600 dark:hover:bg-green-500 dark:text-green-200 rounded"
+          >
+            <Upload size={18} className="mr-2" />
+            Load Puzzle
+          </button>
+          <button
+            onClick={savePuzzle}
+            className="w-full flex mb-5 items-center justify-center px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700
+             dark:bg-blue-600 dark:hover:bg-blue-500 dark:text-blue-200 rounded"
+          >
+            <Download size={18} className="mr-2" />
+            Save Puzzle
+          </button>
+          <button
+            onClick={generateRandomPuzzle}
+            className="w-full flex mb-5 items-center justify-center px-4 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700
+             dark:bg-pink-600 dark:hover:bg-pink-500 dark:text-pink-200 rounded"
+          >
+            <Plus size={18} className="mr-2" />
+            Generate Random Puzzle
+          </button>
+        </div>
       </div>
 
-      {/* Grid Display */}
-      <div className="flex-1 p-8 flex items-center justify-center">
-        <div className="bg-white shadow-lg rounded-lg overflow-hidden">
-          {gridData.length > 0 ? (
-            <div className="grid gap-px bg-gray-200">
-              {gridData.map((row, i) => (
-                <div key={i} className="flex gap-px">
-                  {row.map((cell, j) => (
-                    <div
-                      key={`${i}-${j}`}
-                      className="w-12 h-12 bg-white flex items-center justify-center text-xl font-medium hover:bg-gray-50 focus-within:bg-blue-50"
-                    >
-                      <input
-                        type="number"
-                        min="0"
-                        max={gridSize}
-                        value={cell || ''}
-                        onChange={(e) => {
-                          const newGrid = [...gridData];
-                          newGrid[i][j] = Number(e.target.value) || 0;
-                          setGridData(newGrid);
-                        }}
-                        className="w-full h-full text-center focus:outline-none bg-transparent"
-                      />
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="p-8 text-center text-gray-400 space-y-4">
-              <Grid className="h-16 w-16 mx-auto" />
-              <p className="text-xl font-medium">No grid displayed</p>
-              <p>Create a new grid or load an existing puzzle</p>
-            </div>
-          )}
+      {/* Main Area (Grid) */}
+      <div className="flex-1 p-8">
+        <div className="flex items-center justify-between mb-20">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-300">
+            {puzzleTypes.find(t => t.id === selectedPuzzleType)?.name || 'Puzzle'} ({gridSize}×{gridSize})
+          </h2>
+          <div className="flex space-x-2">
+            <button
+              onClick={solvePuzzle}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-red-700 dark:hover:bg-red-600 text-white rounded shadow flex items-center"
+              disabled={status === 'solving'}
+            >
+              {status === 'solving' ? (
+                <>Solving...</>
+              ) : (
+                <>
+                  <CheckCircle size={18} className="mr-2" />
+                  Solve Puzzle
+                </>
+              )}
+            </button>
+            <button className="p-2 text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
+              <HelpCircle size={20}>
+
+                </HelpCircle>
+            </button>
+          </div>
+        </div>
+
+        {renderGrid()}
+
+        {message && (
+          <div className={`mt-20 p-3 rounded ${
+            status === 'error' ? 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100' :
+            status === 'solved' ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' :
+            'bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100'
+          }`}>
+            {message}
+          </div>
+        )}
+
+        <div className="mt-6 bg-gray-100 dark:bg-gray-700 rounded p-4">
+          <h3 className="font-medium text-gray-800 dark:text-gray-300 mb-2">About {puzzleTypes.find(t => t.id === selectedPuzzleType)?.name}</h3>
+          <p className="text-gray-600 dark:text-gray-200 text-sm">
+            {selectedPuzzleType === 'numberlink' && 'Connect matching numbers with a continuous path.'}
+            {selectedPuzzleType === 'nurikabe' && 'Create islands of white cells surrounded by a continuous wall of black cells.'}
+            {selectedPuzzleType === 'shikaku' && 'Divide the grid into rectangular regions, each containing exactly one number.'}
+            {selectedPuzzleType === 'sudoku' && 'Fill the grid so that every row, column, and 3×3 box contains digits 1-9.'}
+            {selectedPuzzleType === 'futoshiki' && 'Fill the grid with numbers following the inequality constraints.'}
+            {selectedPuzzleType === 'hashiwokakero' && 'Connect islands with bridges to form a single connected group.'}
+          </p>
         </div>
       </div>
     </div>

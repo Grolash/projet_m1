@@ -1,12 +1,15 @@
+import {heroui} from "@heroui/react";
+
 /** @type {import('@tailwindcss/postcss').Config} */
 export default {
-  darkMode: 'class',
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
+    "./node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}"
   ],
   theme: {
     extend: {},
   },
-  plugins: [],
+  darkMode: 'class',
+  plugins: [heroui()],
 }

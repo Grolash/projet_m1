@@ -1,7 +1,9 @@
-import HomePage from './home_page.tsx';
+import HomePage from './home_page_2.tsx';
 
 function App() {
-  return <HomePage />;
+  return (
+      <HomePage />
+  )
 }
 
 export default App;
