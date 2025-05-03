@@ -7,14 +7,14 @@ export interface PuzzleConfig {
   constraints?: any; // For puzzles like Futoshiki that have additional constraints
 }
 
-export async function solvePuzzle(puzzleConfig: PuzzleConfig): Promise<number[][]> {
+export async function solvePuzzleService(pyodide: any, puzzleConfig: PuzzleConfig): Promise<string[][]> {
   try {
     // For Futoshiki, we need to handle the constraints separately
     if (puzzleConfig.type === 'futoshiki' && puzzleConfig.constraints) {
-      return await pyodideSolvePuzzle(puzzleConfig.type, puzzleConfig.grid, puzzleConfig.constraints);
+      return await pyodideSolvePuzzle(pyodide, puzzleConfig.type, puzzleConfig.grid, puzzleConfig.constraints);
     }
 
-    return await pyodideSolvePuzzle(puzzleConfig.type, puzzleConfig.grid);
+    return await pyodideSolvePuzzle(pyodide, puzzleConfig.type, puzzleConfig.grid);
   } catch (error) {
     console.error('Error solving puzzle:', error);
     throw error;
@@ -22,7 +22,7 @@ export async function solvePuzzle(puzzleConfig: PuzzleConfig): Promise<number[][
 }
 
 export function validatePuzzle(puzzleConfig: PuzzleConfig): boolean {
-  const { type, grid } = puzzleConfig;
+  const { type, size, grid } = puzzleConfig;
 
   // Basic validation
   if (!grid || !Array.isArray(grid) || grid.length === 0) {
@@ -30,7 +30,6 @@ export function validatePuzzle(puzzleConfig: PuzzleConfig): boolean {
   }
 
   // Check for consistent grid dimensions
-  const size = grid.length;
   for (const row of grid) {
     if (!Array.isArray(row) || row.length !== size) {
       return false;
@@ -71,7 +70,7 @@ export function generateEmptyGrid(size: number): number[][] {
   return Array(size).fill(0).map(() => Array(size).fill(0));
 }
 
-export function generateRandomPuzzle(type: string, size: number): PuzzleConfig {
+export function generatePuzzle(type: string, size: number): PuzzleConfig {
   // This is a placeholder for actual puzzle generation
   // In a real implementation, this would call the backend to generate puzzles
   const grid = generateEmptyGrid(size);

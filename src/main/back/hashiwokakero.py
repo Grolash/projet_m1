@@ -18,7 +18,7 @@ class Hashiwokakero(Puzzle):
                 self.nodes_dict[i] = self.nodes[-1]
 
     class Node:
-        def __init__(self, pos, value, hashiwokakero, neighbors=None):
+        def __init__(self, pos, value, neighbors=None):
             self.index = pos
             self.value = value
             self.neighbors = []  # First node encountered for each orthogonal direction

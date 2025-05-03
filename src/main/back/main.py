@@ -1,16 +1,37 @@
-# This is a sample Python script.
-
-# Press Maj+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
-
-
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+from futoshiki import Futoshiki
+from hashiwokakero import Hashiwokakero
+from numberlink import Numberlink
+from nurikabe import Nurikabe
+from shikaku import Shikaku
+from sudoku import Sudoku
 
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
+def call_puzzle_solver(puzzle, grid, constraints=None):
+    match puzzle:
+        case "futoshiki":
+            if constraints:
+                futoshiki = Futoshiki(grid, constraints)
+                return futoshiki.solve()
+            else:
+                raise Exception
+        case "hashiwokakero":
+            hasiwokakero = Hashiwokakero(grid)
+            return hasiwokakero.solve()
+        case "numberlink":
+            numberlink = Numberlink(grid)
+            return numberlink.solve()
+        case "nurikabe":
+            nurikabe = Nurikabe(grid)
+            return nurikabe.solve()
+        case "shikaku":
+            shikaku = Shikaku(grid)
+            return shikaku.solve()
+        case "sudoku":
+            sudoku = Sudoku(grid)
+            return sudoku.solve()
+        case _:
+            raise Exception
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+
+def call_puzzle_generator(puzzle):
+    pass
