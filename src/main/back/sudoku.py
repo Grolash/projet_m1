@@ -6,11 +6,12 @@ class Sudoku(Puzzle):
     def __init__(self, rows):
         super().__init__(9, rows)
         try:
-            assert len(self.grid) == 81
-            assert max(self.grid) == 9
-        except AssertionError as e:
-            raise e
-        self.model = cp_model.CpModel() # Create the model
+            assert len(self.grid) == 81, f'Grid has size {len(self.grid)} instead of 81'
+            assert max(self.grid) <= 9, f'Grid has value {max(self.grid)} which is greater than 9'
+            assert min(self.grid) >= 0, f'Grid has value {min(self.grid)} which is less than 0'
+        except AssertionError:
+            raise
+        self.model = cp_model.CpModel()  # Create the model
         self.DOMAIN = 9
         self.grid_expr = [
             self.model.new_int_var(1, 9, 'x[%i]' % i) if x == 0 else self.model.new_int_var(x, x, 'x[%i]' % i) for i, x
@@ -97,7 +98,7 @@ if __name__ == '__main__':
               [0, 0, 2, 0, 1, 0, 0, 0, 0],
               [0, 0, 0, 0, 4, 0, 0, 0, 9]]
 
-    s = Sudoku(grid)
+    s = Sudoku(puzzle)
     s.print()
     print("\n ===================================== \n")
     failpuzzle = [
