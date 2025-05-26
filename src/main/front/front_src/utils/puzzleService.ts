@@ -7,7 +7,7 @@ export interface PuzzleConfig {
 }
 
 interface PuzzleResponse {
-  solution: any;
+  puzzle: any;
 }
 
 export async function solvePuzzleService(puzzleConfig: PuzzleConfig): Promise<string[][]> {
@@ -25,13 +25,13 @@ export async function solvePuzzleService(puzzleConfig: PuzzleConfig): Promise<st
     }
 
     const data: PuzzleResponse = await response.json();
-    if (!data.solution) {
+    if (!data.puzzle) {
       throw new Error('No solution found');
     }
-    return generateGridFromSolution(data.solution, puzzleConfig.type, puzzleConfig.size, puzzleConfig.grid, puzzleConfig.constraints);
+    return generateGridFromSolution(data.puzzle, puzzleConfig.type, puzzleConfig.size, puzzleConfig.grid, puzzleConfig.constraints);
   }
     catch (error) {
-        console.error('Error solving puzzle:', error);
+        throw new Error(`${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 
 }
@@ -90,7 +90,11 @@ function generateGridFromSolution(solution: any, type: string, size, original_gr
         }
         return nurikabeGrid;
     case 'shikaku':
+        const girdPart = solution[0];
+        const shikakuGrid = convertGenericGridTo2DArray(girdPart, size);
+        const rectangles = solution[1];
     case 'futoshiki':
+        return convertGenericGridTo2DArray(solution, size);
     case 'hashiwokakero':
     default:
       throw new Error('Unknown puzzle type');
@@ -186,10 +190,10 @@ export async function generatePuzzle(type: string, size: number): Promise<string
     }
 
     const data: PuzzleResponse = await response.json();
-    if (!data.solution) {
+    if (!data.puzzle) {
       throw new Error('No solution found');
     }
-    return generateGridFromSolution(data.solution, puzzleConfig.type, puzzleConfig.size, puzzleConfig.grid, puzzleConfig.constraints);
+    return convertGenericGridTo2DArray(data.puzzle, size)
   } catch (error) {
     console.error('Error generating puzzle:', error);
   }

@@ -31,6 +31,8 @@ export default function PuzzleSolverHomepage() {
   const [status, setStatus] = useState('ready'); // ready, solving, solved, error
   const [message, setMessage] = useState('');
   const [solution, setSolution] = useState<string[][] | null>(null);
+  const [displayedGrid, setDisplayedGrid] = useState<boolean>(false);
+  const [wantedSize, setWantedSize] = useState<number>(gridSize);
 
   const ThemeToggle = () => {
     const { theme, toggleTheme } = useTheme();
@@ -55,7 +57,9 @@ export default function PuzzleSolverHomepage() {
   }, [selectedPuzzleType]);
 
   const createEmptyGrid = () => {
-    const newGrid = generateEmptyGrid(gridSize);
+    setGridSize(wantedSize)
+    setDisplayedGrid(false)
+    const newGrid = generateEmptyGrid(wantedSize);
     setGrid(newGrid);
     setSolution(null);
     setStatus('ready');
@@ -64,19 +68,19 @@ export default function PuzzleSolverHomepage() {
 
   const handlePuzzleTypeChange = (e : ChangeEvent<HTMLSelectElement>) => {
     const newType = e.target.value;
+    setWantedSize(defaultGridSizes[newType as keyof typeof defaultGridSizes]);
     setSelectedPuzzleType(newType);
-    setGridSize(defaultGridSizes[newType as keyof typeof defaultGridSizes]);
   };
 
   const incrementGridSize = () => {
-    if (gridSize < 20) {
-      setGridSize(gridSize + 1);
+    if (wantedSize < 20) {
+      setWantedSize(wantedSize + 1);
     }
   };
 
   const decrementGridSize = () => {
-    if (gridSize > 5) {
-      setGridSize(gridSize - 1);
+    if (wantedSize > 5) {
+      setWantedSize(wantedSize - 1);
     }
   };
 
@@ -151,16 +155,25 @@ export default function PuzzleSolverHomepage() {
 
   const getPuzzle = () => {}
 
-  const generateRandomPuzzle = () => {
+  const generateRandomPuzzle = async () => {
     try {
-      const puzzleConfig = generatePuzzle(selectedPuzzleType, gridSize);
-      setGrid(puzzleConfig.grid);
+      const puzzleConfig = await generatePuzzle(selectedPuzzleType, gridSize);
+      setDisplayedGrid(false)
+      setGrid(puzzleConfig);
       setSolution(null);
       setMessage('Random puzzle generated');
     } catch (error : any) {
       setMessage(`Error generating puzzle: ${error.message}`);
     }
   };
+
+  const displaySolution = () => {
+    if (solution) {
+        setDisplayedGrid(!displayedGrid);
+    } else {
+      solvePuzzle().then(r => setDisplayedGrid(!displayedGrid))
+    }
+  }
 
   const solvePuzzle = async () => {
     setStatus('solving');
@@ -199,7 +212,7 @@ export default function PuzzleSolverHomepage() {
             <button
               onClick={decrementGridSize}
               className="px-3 py-2 bg-gray-200 hover:bg-gray-300 dark:text-neutral-200 dark:bg-gray-600 dark:hover:bg-gray-400 rounded-l"
-              disabled={gridSize <= 5}
+              disabled={wantedSize <= 5}
             >
               -
             </button>
@@ -208,13 +221,13 @@ export default function PuzzleSolverHomepage() {
               inputMode={'numeric'}
               min="5"
               max="20"
-              value={gridSize}
+              value={wantedSize}
               className="w-16 p-2 text-center border-y border-gray-300 dark:text-neutral-200 dark:bg-gray-500 dark:border-gray-600 focus:outline-none"
             />
             <button
               onClick={incrementGridSize}
               className="px-3 py-2 bg-gray-200 hover:bg-gray-300 dark:text-neutral-200 dark:bg-gray-600 dark:hover:bg-gray-400 rounded-r"
-              disabled={gridSize >= 20}
+              disabled={wantedSize >= 15}
             >
               +
             </button>
@@ -225,9 +238,14 @@ export default function PuzzleSolverHomepage() {
 
   // Render the grid based on puzzle type
   const renderGrid = () => {
-    const displayGrid = solution || grid;
+    const displayGrid = displayedGrid ? solution || grid : grid;
 
-    return (
+    switch (selectedPuzzleType) {
+      case "sudoku":
+        case "futoshiki":
+        case "nurikabe":
+          case "numberlink":
+            return (
       <div className="mt-6 w-full overflow-auto">
         <div
           className="grid gap-0.5 mx-auto"
@@ -245,23 +263,23 @@ export default function PuzzleSolverHomepage() {
                 onChange={(e) => handleCellChange(rowIndex, colIndex, e.target.value)}
                 className={`h-10 w-full dark:text-gray-200 border text-center focus:outline-none 
                 focus:ring-0 focus:border-blue-400 dark:focus:outline-none dark:focus:border-blue-500 ${
-                  solution ? 'bg-green-50 dark:bg-green-600 border-green-600 dark:border-green-300'  
+                  displayedGrid ? 'bg-green-100 dark:bg-green-600 border-green-600 dark:border-green-300'  
                       : 'border-gray-700 dark:border-gray-400'
                 } ${
-                  grid[rowIndex][colIndex] !== "0" && !solution ? 'font-semibold' : ''
-                }`}
+                  grid[rowIndex][colIndex] !== "0" && !displayedGrid ? 'font-semibold' : ''
+                } ${solution && grid[rowIndex][colIndex] !== "0" && grid[rowIndex][colIndex] !== solution[rowIndex][colIndex] && displayedGrid ? 'bg-red-200 dark:bg-red-500 border-red-500 text-red-800 dark:border-red-400 dark:text-red-200' : ''}`}
                 maxLength={selectedPuzzleType === 'sudoku' ? 1 : 2}
-                readOnly={!!solution}
+                readOnly={displayedGrid}
               />
             ))
           ))}
         </div>
 
-        {solution && (
+        {displayedGrid && (
           <div className="flex justify-center mt-4 mr-20">
             <button
-              onClick={() => setSolution(null)}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded shadow"
+              onClick={() => setDisplayedGrid(false)}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-red-700 dark:hover:bg-red-600 text-white rounded shadow"
             >
               Back to Editing
             </button>
@@ -269,6 +287,15 @@ export default function PuzzleSolverHomepage() {
         )}
       </div>
     );
+            case "shikaku":
+              // Render Shikaku grid, which is similar to Sudoku but there there is a constraint cell between each vue cell
+
+
+
+
+    }
+
+
   };
 
 
@@ -357,7 +384,7 @@ export default function PuzzleSolverHomepage() {
           </h2>
           <div className="flex space-x-2">
             <button
-              onClick={solvePuzzle}
+              onClick={displaySolution}
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-red-700 dark:hover:bg-red-600 text-white rounded shadow flex items-center"
               disabled={status === 'solving'}
             >
@@ -366,7 +393,7 @@ export default function PuzzleSolverHomepage() {
               ) : (
                 <>
                   <CheckCircle size={18} className="mr-2" />
-                  Solve Puzzle
+                  Display Solution
                 </>
               )}
             </button>

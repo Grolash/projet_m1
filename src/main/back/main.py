@@ -52,22 +52,67 @@ def call_puzzle_solver(puzzle, grid, constraints=None):
     match puzzle:
         case "futoshiki":
             if constraints:
-                futoshiki = Futoshiki(grid, constraints)
-                return futoshiki.solve()
+                new_grid = [[int(x) for x in row] for row in grid]
+                try:
+                    futoshiki = Futoshiki(new_grid, constraints)
+                except Exception as e:
+                    print(f"Error constructing Futoshiki: {e}")
+                    raise
+                result = futoshiki.solve()
+                if result:
+                    return futoshiki.get_rows(result)
+                else:
+                    raise Exception("No solution found")
             else:
                 raise Exception("Constraints are required for Futoshiki puzzles.")
         case "hashiwokakero":
-            hasiwokakero = Hashiwokakero(grid)
-            return hasiwokakero.solve()
+            new_grid = [[int(x) for x in row] for row in grid]
+            try:
+                hashiwokakero = Hashiwokakero(new_grid)
+            except Exception as e:
+                print(f"Error constructing Hashiwokakero: {e}")
+                raise
+            result = hashiwokakero.solve()
+            if result:
+                return hashiwokakero.get_rows(result)
+            else:
+                raise Exception("No solution found")
         case "numberlink":
-            numberlink = Numberlink(grid)
-            return numberlink.solve()
+            new_grid = [[int(x) for x in row] for row in grid]
+            try:
+                numberlink = Numberlink(new_grid)
+            except Exception as e:
+                print(f"Error constructing Numberlink: {e}")
+                raise
+            result = numberlink.solve()
+            if result:
+                return numberlink.get_rows(result)
+            else:
+                raise Exception("No solution found")
         case "nurikabe":
-            nurikabe = Nurikabe(grid)
-            return nurikabe.solve()
+            new_grid = [[int(x) for x in row] for row in grid]
+            try:
+                nurikabe = Nurikabe(new_grid)
+            except Exception as e:
+                print(f"Error constructing Nurikabe: {e}")
+                raise
+            result = nurikabe.solve()
+            if result:
+                return nurikabe.get_rows(result)
+            else:
+                raise Exception("No solution found")
         case "shikaku":
-            shikaku = Shikaku(grid)
-            return shikaku.solve()
+            new_grid = [[int(x) for x in row] for row in grid]
+            try:
+                shikaku = Shikaku(grid)
+            except Exception as e:
+                print(f"Error constructing Shikaku: {e}")
+                raise
+            result = shikaku.solve()
+            if result:
+                return shikaku.get_rows(result[0]), result[1]
+            else:
+                raise Exception("No solution found")
         case "sudoku":
             new_grid = [[int(x) for x in row] for row in grid]
             try:
@@ -82,7 +127,6 @@ def call_puzzle_solver(puzzle, grid, constraints=None):
                 raise Exception("No solution found")
         case _:
             raise Exception("Invalid puzzle type")
-    return None
 
 
 @app.route('/api/generate', methods=['POST', 'OPTIONS'])
@@ -104,7 +148,49 @@ def generate_puzzle():
 
 
 def call_puzzle_generator(puzzle, size, constraints=None):
-    pass
+    match puzzle:
+        case "futoshiki":
+            pass
+        case "hashiwokakero":
+            pass
+        case "numberlink":
+            pass
+        case "nurikabe":
+            pass
+        case "shikaku":
+            pass
+        case "sudoku":
+            k = 40  # Number of cells to remove for the puzzle
+            import random
+            grid = [0 for _ in range(81)]
+            col_indexes = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+            numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+            for i in range(9):
+                random.shuffle(col_indexes)
+                random.shuffle(numbers)
+                col = col_indexes.pop()
+                number = numbers.pop()
+                grid[i * 9 + col] = number
+            grid = [[x for x in grid[i:i + 9]] for i in range(0, 81, 9)]
+            print(grid)
+            s = Sudoku(grid)
+            grid = s.solve()
+            if grid:
+                grid = [[grid[i * 9 + j] for j in range(9)] for i in range(9)]
+                # Remove k numbers from the grid to create a puzzle
+                for _ in range(k):
+                    i = random.randint(0, 8)
+                    j = random.randint(0, 8)
+                    while grid[i][j] == 0:
+                        i = random.randint(0, 8)
+                        j = random.randint(0, 8)
+                    grid[i][j] = 0
+                return grid
+            else:
+                raise Exception("Failed to generate a valid Sudoku puzzle.")
+
+        case _:
+            raise Exception("Invalid puzzle type")
 
 
 if __name__ == '__main__':

@@ -70,6 +70,10 @@ class Sudoku(Puzzle):
             print("No solution found")
 
 
+
+
+
+
 if __name__ == '__main__':
     # A sudoku puzzle
     ridiculously_easy_puzzle = (
