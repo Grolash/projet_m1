@@ -74,7 +74,7 @@ def call_puzzle_solver(puzzle, grid, constraints=None):
                 raise
             result = hashiwokakero.solve()
             if result:
-                return hashiwokakero.get_rows(result)
+                return result
             else:
                 raise Exception("No solution found")
         case "numberlink":
@@ -110,7 +110,7 @@ def call_puzzle_solver(puzzle, grid, constraints=None):
                 raise
             result = shikaku.solve()
             if result:
-                return shikaku.get_rows(result[0]), result[1]
+                return result[1]
             else:
                 raise Exception("No solution found")
         case "sudoku":
@@ -139,7 +139,6 @@ def generate_puzzle():
     puzzle = data.get('type')
     size = data.get('size')
     constraints = data.get('constraints')
-
     try:
         generated_puzzle = call_puzzle_generator(puzzle, size, constraints)
         return jsonify({"puzzle": generated_puzzle})
@@ -150,7 +149,74 @@ def generate_puzzle():
 def call_puzzle_generator(puzzle, size, constraints=None):
     match puzzle:
         case "futoshiki":
-            pass
+            k = 3  # Number of constraints to generate
+            import random
+            grid = [[0 for _ in range(size)] for _ in range(size)]
+            row, col = random.randint(0, size - 1), random.randint(0, size - 1)
+            grid[row][col] = random.randint(1, size)
+            # Generate random constraints
+            futoshiki = Futoshiki(grid, [])
+            result = futoshiki.solve()
+            if result:
+                result = futoshiki.get_rows(result)
+            else:
+                raise Exception("Failed to generate a valid Futoshiki puzzle.")
+            # Add constraints from result
+            constraints = []
+            for _ in range(k):
+                row, col = random.randint(0, size - 1), random.randint(0, size - 1)
+                horizontal = random.choice([True, False])
+                new_col_1 = 0
+                new_col_2 = 0
+                new_row_1 = 0
+                new_row_2 = 0
+                if horizontal:
+                    new_col = 0
+                    if col < size - 1:
+                        ineq = ""
+                        new_col = col + 1
+                        if result[row][col] < result[row][new_col]:
+                            ineq = '<'
+                        else:
+                            ineq = '>'
+                    else:
+                        ineq = ''
+                        new_col = col - 1
+                        if result[row][col - 1] < result[row][col]:
+                            ineq = '<'
+                        else:
+                            ineq = '>'
+                    new_col_1 = min(col, new_col)
+                    new_col_2 = max(col, new_col)
+                    isHorizontal = True
+                    key = f"h-{row}-{new_col_1}"
+                    constraint = (key, ineq, row * size + new_col_1, row * size + new_col_2, isHorizontal)
+                    if constraint not in constraints:
+                        constraints.append(constraint)
+                else:
+                    new_row = 0
+                    if row < size - 1:
+                        ineq = ""
+                        new_row = row + 1
+                        if result[row][col] < result[new_row][col]:
+                            ineq = '<'
+                        else:
+                            ineq = '>'
+                    else:
+                        ineq = ''
+                        new_row = row - 1
+                        if result[row - 1][col] < result[row][col]:
+                            ineq = '<'
+                        else:
+                            ineq = '>'
+                    new_row_1 = min(row, new_row)
+                    new_row_2 = max(row, new_row)
+                    isHorizontal = False
+                    key = f"v-{new_row_1}-{col}"
+                    constraint = (key, ineq, new_row_1 * size + col, new_row_2 * size + col, isHorizontal)
+                    if constraint not in constraints:
+                        constraints.append(constraint)
+            return {"grid": grid, "constraints": constraints}
         case "hashiwokakero":
             pass
         case "numberlink":
