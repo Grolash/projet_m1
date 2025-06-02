@@ -235,19 +235,20 @@ export default function PuzzleSolverHomepage() {
     }
   };
 
-  const displaySolution = () => {
+  const displaySolution = async () => {
     if (solution) {
         setDisplayedGrid(!displayedGrid);
         if (selectedPuzzleType === 'shikaku') {
           setDisplayShikakuSolution(!displayShikakuSolution);
         }
     } else {
-      solvePuzzle().then(r => {if(solution){setDisplayedGrid(!displayedGrid);} if (selectedPuzzleType === 'shikaku') {
-          if(solution) {
-            setDisplayShikakuSolution(!displayShikakuSolution);
-          }
-        }
-    })}
+        try {
+          await solvePuzzle();
+      }  catch (error : any) {
+        setStatus('error');
+        setMessage(`Error displaying solution: ${error.message}`);
+      }
+    }
   }
 
   const solvePuzzle = async () => {
@@ -302,6 +303,10 @@ export default function PuzzleSolverHomepage() {
           setSolution(grid);
         }
       }
+      setDisplayedGrid(!displayedGrid);
+      if (selectedPuzzleType === 'shikaku') {
+        setDisplayShikakuSolution(!displayShikakuSolution);
+      }
       setStatus('solved');
       setMessage('Puzzle solved successfully!');
     } catch (error : any) {
@@ -346,16 +351,16 @@ export default function PuzzleSolverHomepage() {
       }
 
       // Shikaku specific functions
-  const getCellKey = (row, col) => `${row}-${col}`;
+  const getCellKey = (row: number, col: number) => `${row}-${col}`;
 
-  const isCellInRectangle = (row, col, rectangles) => {
+  const isCellInRectangle = (row: number, col: number, rectangles) => {
     return rectangles.find(rect =>
       row >= rect.startRow && row <= rect.endRow &&
       col >= rect.startCol && col <= rect.endCol
     );
   };
 
-  const handleShikakuMouseDown = (rowIndex, colIndex) => {
+  const handleShikakuMouseDown = (rowIndex: number, colIndex: number) => {
     if (displayedGrid) return;
 
     setIsDrawing(true);
@@ -368,7 +373,7 @@ export default function PuzzleSolverHomepage() {
     });
   };
 
-  const handleShikakuMouseEnter = (rowIndex, colIndex) => {
+  const handleShikakuMouseEnter = (rowIndex: number, colIndex: number) => {
     if (!isDrawing || !dragStart) return;
 
     setCurrentRect({
@@ -422,15 +427,15 @@ export default function PuzzleSolverHomepage() {
     }));
   };
 
-const getCellCoordinates = (row, col) => `${row},${col}`;
+const getCellCoordinates = (row: number, col: number) => `${row},${col}`;
 
-const isValidDragTarget = (row, col, startNumber) => {
+const isValidDragTarget = (row: number, col: number, startNumber: string) => {
   const cellValue = grid[row][col];
   return cellValue === startNumber && !(row === currentPath?.start?.row && col === currentPath?.start?.col);
 };
 
 // Track actual mouse path through cells
-const addCellToCurrentPath = (row, col) => {
+const addCellToCurrentPath = (row: number, col: number) => {
   if (!currentPath) return;
 
   const lastCell = currentPath.path[currentPath.path.length - 1];
@@ -446,7 +451,7 @@ const addCellToCurrentPath = (row, col) => {
   }
 };
 
-const handleNumberlinkMouseDown = (rowIndex, colIndex) => {
+const handleNumberlinkMouseDown = (rowIndex: number, colIndex: number) => {
   if (displayedGrid || numberlinkEditMode) return;
 
   const cellValue = grid[rowIndex][colIndex];
@@ -462,7 +467,7 @@ const handleNumberlinkMouseDown = (rowIndex, colIndex) => {
   }
 };
 
-const handleNumberlinkMouseEnter = (rowIndex, colIndex) => {
+const handleNumberlinkMouseEnter = (rowIndex: number, colIndex: number) => {
   if (!isDragging || !currentPath) return;
 
   addCellToCurrentPath(rowIndex, colIndex);
@@ -472,7 +477,7 @@ const handleNumberlinkMouseEnter = (rowIndex, colIndex) => {
   }));
 };
 
-const handleNumberlinkMouseUp = (rowIndex, colIndex) => {
+const handleNumberlinkMouseUp = (rowIndex: number, colIndex: number) => {
   if (!isDragging || !currentPath) return;
 
   // Add final cell to path if different
@@ -509,7 +514,7 @@ const removePathForNumber = (number) => {
 };
 
 // Check if a cell is part of any path
-const getCellPathInfo = (row, col) => {
+const getCellPathInfo = (row: number, col: number) => {
   for (let path of numberlinkPaths) {
     const cellInPath = path.path.find(p => p.row === row && p.col === col);
     if (cellInPath) {
@@ -520,7 +525,7 @@ const getCellPathInfo = (row, col) => {
 };
 
 // Get the line character for display (using your existing logic)
-const getLineCharacter = (row, col, pathNumber) => {
+const getLineCharacter = (row: number, col: number, pathNumber: number) => {
   const convertedGrid = Array(gridSize).fill("0").map(() => Array(gridSize).fill("0"));
 
   // Fill converted grid with path numbers
@@ -561,7 +566,7 @@ const getLineCharacter = (row, col, pathNumber) => {
 };
 
 // Nurikabe helper functions
-const toggleNurikabeX = (row, col) => {
+const toggleNurikabeX = (row: number, col: number) => {
   const cellKey = `${row}-${col}`;
   const newXCells = new Set(nurikabeXCells);
 
@@ -577,7 +582,7 @@ const toggleNurikabeX = (row, col) => {
   setNurikabeXCells(newXCells);
 };
 
-const handleNurikabeClick = (e, row, col) => {
+const handleNurikabeClick = (e, row: number, col: number) => {
   e.preventDefault();
   if (!nurikabeEditMode && !displayedGrid) {
     toggleNurikabeX(row, col);
@@ -589,7 +594,7 @@ const clearNurikabeXs = () => {
 };
 
 // Futoshiki helper functions
-const getConstraintIndex = (row1, col1, row2, col2, isHorizontal) => {
+const getConstraintIndex = (row1: number, col1: number, row2: number, col2: number, isHorizontal: boolean) => {
   if (isHorizontal) {
     return `h-${row1}-${Math.min(col1, col2)}`;
   } else {
@@ -597,11 +602,11 @@ const getConstraintIndex = (row1, col1, row2, col2, isHorizontal) => {
   }
 };
 
-const flattenIndex = (row, col, gridSize) => {
+const flattenIndex = (row: number, col: number, gridSize: number) => {
   return row * gridSize + col;
 };
 
-const toggleConstraint = (row1, col1, row2, col2, isHorizontal) => {
+const toggleConstraint = (row1: number, col1: number, row2: number, col2: number, isHorizontal: boolean) => {
   const constraintKey = getConstraintIndex(row1, col1, row2, col2, isHorizontal);
   const existingConstraint = futoshikiConstraints.find(c => c.key === constraintKey);
 
@@ -631,7 +636,7 @@ const toggleConstraint = (row1, col1, row2, col2, isHorizontal) => {
   setFutoshikiConstraints(newConstraints);
 };
 
-const getConstraintSymbol = (row1, col1, row2, col2, isHorizontal) => {
+const getConstraintSymbol = (row1: number, col1: number, row2: number, col2: number, isHorizontal: boolean) => {
   const constraintKey = getConstraintIndex(row1, col1, row2, col2, isHorizontal);
   const constraint = futoshikiConstraints.find(c => c.key === constraintKey);
   return constraint ? constraint.symbol : "";
@@ -646,7 +651,7 @@ const clearFutoshikiConstraints = () => {
 };
 
 // Hashiwokakero helper functions
-  const getBridgeInfo = (row, col) => {
+  const getBridgeInfo = (row: number, col: number) => {
     const map = displayedGrid ? hashiSolution : hashiBridges;
   for (const [bridgeId, bridge] of map) {
     const isHorizontal = bridge.from.row === bridge.to.row;
@@ -737,7 +742,7 @@ const hasClearPath = (from, to) => {
 };
 
 // Handle cell clicks in bridge drawing mode
-const handleHashiCellClick = (row, col) => {
+const handleHashiCellClick = (row: number, col: number) => {
   if (displayedGrid) return;
 
   const isNode = grid[row][col] !== "0";
