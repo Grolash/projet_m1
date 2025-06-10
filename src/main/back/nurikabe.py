@@ -1,5 +1,5 @@
 from ortools.sat.python import cp_model
-from src.main.back.puzzle import Puzzle
+from puzzle import Puzzle
 
 
 class Nurikabe(Puzzle):

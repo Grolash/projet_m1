@@ -101,6 +101,7 @@ export default function PuzzleSolverHomepage() {
     setDisplayedGrid(false)
     const newGrid = generateEmptyGrid(wantedSize);
     setGrid(newGrid);
+    setFutoshikiConstraints([])
     setSolution(null);
     setStatus('ready');
     setMessage('Empty grid created');
@@ -969,7 +970,7 @@ const clearAllBridges = () => {
         </div>
       </div>
       {displayedGrid && (
-        <div className="flex justify-center mt-4 mr-12">
+        <div className="flex justify-center mt-4">
           <button
             onClick={() => displaySolution()}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-red-700 dark:hover:bg-red-600 text-white rounded shadow"
@@ -1187,19 +1188,11 @@ const clearAllBridges = () => {
           >
             Clear All Paths
           </button>
-          {solution && (
-            <button
-              onClick={loadSolutionPaths}
-              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded shadow"
-            >
-              Load Solution
-            </button>
-          )}
         </div>
       )}
 
       {displayedGrid && (
-        <div className="flex justify-center mt-4">
+        <div className="flex justify-center mt-4 mr-15">
           <button
             onClick={() => setDisplayedGrid(false)}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-red-700 dark:hover:bg-red-600 text-white rounded shadow"
@@ -1572,7 +1565,7 @@ const clearAllBridges = () => {
              dark:bg-pink-600 dark:hover:bg-pink-500 dark:text-pink-200 rounded"
           >
             <Plus size={18} className="mr-2" />
-            Generate New Puzzle (May Take Some Time)
+            Generate New Puzzle
           </button>
           <button
             onClick={getPuzzle}
