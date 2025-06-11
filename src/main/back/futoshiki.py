@@ -13,7 +13,8 @@ class Futoshiki(Puzzle):
         self.model = cp_model.CpModel()  # Create the model
         self.DOMAIN = self.n
         self.grid_expr = [
-            self.model.new_int_var(1, self.DOMAIN, 'x[%i]' % i) if x == 0 else self.model.new_int_var(x, x, 'x[%i]' % i) for i, x
+            self.model.new_int_var(1, self.DOMAIN, 'x[%i]' % i) if x == 0 else self.model.new_int_var(x, x, 'x[%i]' % i)
+            for i, x
             in enumerate(self.grid)]
 
     def get_rows(self, grid):
@@ -41,8 +42,6 @@ class Futoshiki(Puzzle):
                 self.model.Add(grid[inequality[1]] < grid[inequality[2]])
             elif inequality[0] == '>':
                 self.model.Add(grid[inequality[1]] > grid[inequality[2]])
-            elif inequality[0] == '=':
-                self.model.Add(grid[inequality[1]] == grid[inequality[2]])
 
     def solve(self):
         self.constraints(self.grid_expr)
@@ -80,7 +79,6 @@ class Futoshiki(Puzzle):
 
 
 if __name__ == '__main__':
-
     puzzle = [
         [[">", 0, 1], [">", 2, 3], [">", 3, 4], ["<", 18, 19], ["<", 20, 21], ["<", 21, 22]],
         [0, 0, 0, 0, 0],
